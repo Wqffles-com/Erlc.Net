@@ -4,6 +4,14 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <PackageId>Erlc.Net</PackageId>
+        <Version>0.0.1</Version>
+        <Authors>wqffles.com</Authors>
+        <PackageDescription>An API wrapper for Emergency Response: Liberty County</PackageDescription>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/Wqffles-com/Erlc.Net</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/Wqffles-com/Erlc.Net</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
     </PropertyGroup>
 
 </Project>
