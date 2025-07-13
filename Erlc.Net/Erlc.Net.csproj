@@ -5,13 +5,19 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <PackageId>Erlc.Net</PackageId>
-        <Version>0.0.1</Version>
+        <Version>0.1.0</Version>
+        <PackageTags>Roblox;ERLC;API;Wrapper</PackageTags>
         <Authors>wqffles.com</Authors>
         <PackageDescription>An API wrapper for Emergency Response: Liberty County</PackageDescription>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/Wqffles-com/Erlc.Net</PackageProjectUrl>
         <RepositoryUrl>https://github.com/Wqffles-com/Erlc.Net</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
-
+    
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+    
 </Project>
