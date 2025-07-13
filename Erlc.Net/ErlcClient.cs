@@ -4,6 +4,11 @@ using Erlc.Net.Entities;
 
 namespace Erlc.Net;
 
+/// <summary>
+/// A client used to interact with PRC's API.
+/// </summary>
+/// <param name="accessToken">The access token to use. Can be obtained at PRC's website.</param>
+/// <param name="version">PRC API version to use.</param>
 public class ErlcClient(string accessToken, byte version = 1)
 {
     private readonly HttpClient _httpClient = new HttpClient
@@ -15,6 +20,7 @@ public class ErlcClient(string accessToken, byte version = 1)
         }
     };
 
+    /// <inheritdoc cref="Server.RunCommand(string)"/>
     public async Task<ErlcResponse> RunCommand(string command)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "server/command")
@@ -41,6 +47,10 @@ public class ErlcClient(string accessToken, byte version = 1)
         };
     }
     
+    /// <summary>
+    /// Gets the server associated with this API Key.
+    /// </summary>
+    /// <returns>A filled <see cref="Server"/> object.</returns>
     public async Task<ErlcResponse<Server>> GetServer()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "server");
@@ -92,6 +102,7 @@ public class ErlcClient(string accessToken, byte version = 1)
         };
     }
 
+    /// <inheritdoc cref="Server.GetPlayers"/>
     public async Task<ErlcResponse<ErlcPlayer[]>> GetPlayers()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "server/players");
@@ -141,6 +152,7 @@ public class ErlcClient(string accessToken, byte version = 1)
         };
     }
 
+    /// <inheritdoc cref="Server.GetJoinLogs()"/>
     public async Task<ErlcResponse<JoinLog[]>> GetJoinLogs()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "server/joinlogs");
@@ -190,6 +202,7 @@ public class ErlcClient(string accessToken, byte version = 1)
         };
     }
 
+    /// <inheritdoc cref="Server.GetPlayersInQueue()"/>
     public async Task<ErlcResponse<ulong[]>> GetPlayersInQueue()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "server/queue");
@@ -235,6 +248,7 @@ public class ErlcClient(string accessToken, byte version = 1)
         };
     }
     
+    /// <inheritdoc cref="Server.GetKillLogs()"/>
     public async Task<ErlcResponse<KillLog[]>> GetKillLogs()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "server/killlogs");
@@ -282,6 +296,7 @@ public class ErlcClient(string accessToken, byte version = 1)
         };
     }
 
+    /// <inheritdoc cref="Server.GetCommandLogs()"/>
     public async Task<ErlcResponse<CommandLog[]>> GetCommandLogs()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "server/commandlogs");
@@ -331,6 +346,7 @@ public class ErlcClient(string accessToken, byte version = 1)
         };
     }
 
+    /// <inheritdoc cref="Server.GetModCallLogs()"/>
     public async Task<ErlcResponse<ModeratorCallLog[]>> GetModCallLogs()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "server/modcalls");
@@ -380,6 +396,7 @@ public class ErlcClient(string accessToken, byte version = 1)
         };
     }
 
+    /// <inheritdoc cref="Server.GetBans()"/>
     public async Task<ErlcResponse<Dictionary<string, string>>> GetBans()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "server/bans");
@@ -429,6 +446,7 @@ public class ErlcClient(string accessToken, byte version = 1)
         };
     }
 
+    /// <inheritdoc cref="Server.GetSpawnedVehicles()"/>
     public async Task<ErlcResponse<SpawnedVehicle[]>> GetSpawnedVehicles()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "server/vehicles");
