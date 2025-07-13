@@ -17,4 +17,10 @@ public class Server : IContainsClient
     public Task<ErlcResponse> ExecuteCommand(string command) => Client.RunCommand(command);
     public Task<ErlcResponse<ErlcPlayer[]>> GetPlayers => Client.GetPlayers();
     public Task<ErlcResponse<JoinLog[]>> GetJoinLogs => Client.GetJoinLogs();
+    public Task<ErlcResponse<ulong[]>> GetPlayersInQueue => Client.GetPlayersInQueue();
+    public Task<ErlcResponse<KillLog[]>> GetKillLogs => Client.GetKillLogs();
+    public Task<ErlcResponse<CommandLog[]>> GetCommandLogs => Client.GetCommandLogs();
+    public Task<ErlcResponse<ModeratorCallLog[]>> GetModCallLogs => Client.GetModCallLogs();
+    public Task<ErlcResponse<Dictionary<string, string>>> GetBans => Client.GetBans();
+    public Task<ErlcResponse<SpawnedVehicle[]>> GetSpawnedVehicles => Client.GetSpawnedVehicles();
 }

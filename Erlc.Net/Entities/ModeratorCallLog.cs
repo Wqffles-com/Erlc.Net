@@ -4,12 +4,8 @@ namespace Erlc.Net.Entities;
 
 public class ModeratorCallLog
 {
-    public required string Caller { get; set; }
-    public string CallerName => Caller.Split(':')[0];
-    public string CallerId => Caller.Split(':')[1];
-    public string? Moderator { get; set; }
-    public string? ModeratorName => Moderator?.Split(':')[0];
-    public string? ModeratorId => Moderator?.Split(':')[1];
+    public required PlayerName Caller { get; set; }
+    public PlayerName? Moderator { get; set; }
     public long Timestamp { get; set; }
     [JsonIgnore] public DateTimeOffset DateTime => DateTimeOffset.FromUnixTimeSeconds(Timestamp);
     
