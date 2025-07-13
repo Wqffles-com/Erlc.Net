@@ -11,8 +11,9 @@ public class Server : IContainsClient
     public required string Name { get; set; }
     public required ulong OwnerId { get; set; }
     public ulong[] CoOwnerIds { get; set; } = [];
+
     /// <summary>
-    /// Currently active players.
+    /// The current number of players on the server.
     /// </summary>
     public required byte CurrentPlayers { get; set; }
     /// <summary>
