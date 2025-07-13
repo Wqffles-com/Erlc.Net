@@ -1,16 +1,26 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Erlc.Net.Entities;
+using Erlc.Net.Exceptions;
 
 namespace Erlc.Net;
 
 /// <summary>
-/// A client used to interact with PRC's API.
+/// Provides methods for interacting with an ERLC server via API.
 /// </summary>
-/// <param name="accessToken">The access token to use. Can be obtained at PRC's website.</param>
-/// <param name="version">PRC API version to use.</param>
 public class ErlcClient(string accessToken, byte version = 1)
 {
+    /// <summary>
+    /// Represents an instance of the HttpClient used for sending HTTP requests
+    /// to the API endpoint. It is pre-configured with the base address and default
+    /// headers required for authentication and API versioning.
+    /// </summary>
+    /// <remarks>
+    /// This HttpClient is specifically initialized with the access token and the
+    /// API version provided during the creation of the <see cref="ErlcClient"/> instance.
+    /// It is used internally to facilitate all API interactions.
+    /// </remarks>
     private readonly HttpClient _httpClient = new HttpClient
     {
         BaseAddress = new Uri($"https://api.policeroleplay.community/v{version}"),
@@ -20,479 +30,111 @@ public class ErlcClient(string accessToken, byte version = 1)
         }
     };
 
-    /// <inheritdoc cref="Server.RunCommand(string)"/>
-    public async Task<ErlcResponse> RunCommand(string command)
+    /// Sends an HTTP request and processes the response as the specified result type.
+    /// <typeparam name="TResult">The type of the expected response content.</typeparam>
+    /// <param name="message">The HTTP request message to be sent.</param>
+    /// <returns>The content of the response deserialized into the specified result type.</returns>
+    /// <exception cref="InvalidTokenException">Thrown if the request is forbidden due to an invalid access token.</exception>
+    /// <exception cref="JsonException">Thrown if the response content cannot be deserialized to the specified type.</exception>
+    /// <exception cref="HttpRequestException">Thrown when the HTTP request fails or encounters success status issues.</exception>
+    private async Task<TResult> Request<TResult>(HttpRequestMessage message)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "server/command")
-        {
-            Content = JsonContent.Create(new { command })
-        };
+        var response = await _httpClient.SendAsync(message);
+        InvalidTokenException.ThrowIfInvalid(response);
+        response.EnsureSuccessStatusCode();
         
-        var response = await _httpClient.SendAsync(request);
-
-        var errorMessage = response.StatusCode switch
-        {
-            HttpStatusCode.BadRequest => "Invalid command",
-            HttpStatusCode.Forbidden => "Invalid access token",
-            HttpStatusCode.UnprocessableEntity => "Server contains no players",
-            HttpStatusCode.InternalServerError => "Problem communicating with Roblox",
-            _ => null
-        };
-        
-        return new ErlcResponse
-        {
-            Success = response.IsSuccessStatusCode,
-            StatusCode = response.StatusCode,
-            ErrorMessage = errorMessage
-        };
+        return await response.Content.ReadFromJsonAsync<TResult>() ?? throw new JsonException($"Unable to parse response: {response}");
     }
-    
+
     /// <summary>
-    /// Gets the server associated with this API Key.
+    /// Sends an HTTP request using the provided HttpRequestMessage.
     /// </summary>
-    /// <returns>A filled <see cref="Server"/> object.</returns>
-    public async Task<ErlcResponse<Server>> GetServer()
+    /// <param name="message">The HttpRequestMessage to be sent.</param>
+    /// <returns>A Task representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidTokenException">Thrown if the provided token is invalid.</exception>
+    /// <exception cref="HttpRequestException">Thrown when the request fails or the response status code indicates a failure.</exception>
+    private async Task Request(HttpRequestMessage message)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, "server");
-        var response = await _httpClient.SendAsync(request);
+        var response = await _httpClient.SendAsync(message);
+        InvalidTokenException.ThrowIfInvalid(response);
+        response.EnsureSuccessStatusCode();
+    }
 
-        if (response.StatusCode == HttpStatusCode.Forbidden)
-        {
-            var responseEntity = new ErlcResponse<Server>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = "Invalid access token"
-            };
+    /// <summary>
+    /// Sends a command to the ERLC server for execution.
+    /// </summary>
+    /// <param name="command">The command to run on the server.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public Task RunCommand(string command) => Request(new HttpRequestMessage(HttpMethod.Post, "server/command")
+    {
+        Content = JsonContent.Create(new { command })
+    });
 
-            return responseEntity;
-        }
-        
-        if (!response.IsSuccessStatusCode)
-        {
-            var responseEntity = new ErlcResponse<Server>
-            {
-                Success = false,
-                StatusCode = response.StatusCode
-            };
-
-            return responseEntity;
-        }
-
-        var server = await response.Content.ReadFromJsonAsync<Server>();
-        if (server is null)
-        {
-            var responseEntity = new ErlcResponse<Server>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = $"Unable to parse server response: {response}"
-            };
-            
-            return responseEntity;
-        }
-        
+    /// Retrieves information about the ERLC server.
+    /// <returns>An instance of the <see cref="Server"/> class containing details about the server and providing methods for server interaction.</returns>
+    /// <exception cref="InvalidTokenException">Thrown if the request is unauthorized due to an invalid access token.</exception>
+    /// <exception cref="JsonException">Thrown if the response content cannot be deserialized into the <see cref="Server"/> type.</exception>
+    /// <exception cref="HttpRequestException">Thrown when the HTTP request fails or encounters success status issues.</exception>
+    public async Task<Server> GetServer()
+    {
+        var server = await Request<Server>(new HttpRequestMessage(HttpMethod.Get, "server"));
         server.Client = this;
-
-        return new ErlcResponse<Server>
-        {
-            Success = true,
-            StatusCode = response.StatusCode,
-            Result = server
-        };
+        
+        return server;
     }
 
-    /// <inheritdoc cref="Server.GetPlayers"/>
-    public async Task<ErlcResponse<ErlcPlayer[]>> GetPlayers()
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, "server/players");
-        var response = await _httpClient.SendAsync(request);
+    /// Retrieves the list of players currently online on the server.
+    /// <returns>An array of <see cref="ErlcPlayer"/> objects representing the active players on the server.</returns>
+    /// <exception cref="InvalidTokenException">Thrown if the request is forbidden due to an invalid access token.</exception>
+    /// <exception cref="JsonException">Thrown if the response content cannot be deserialized to an array of <see cref="ErlcPlayer"/>.</exception>
+    /// <exception cref="HttpRequestException">Thrown when the HTTP request fails or encounters success status issues.</exception>
+    public Task<ErlcPlayer[]> GetPlayers() => Request<ErlcPlayer[]>(new HttpRequestMessage(HttpMethod.Get, "server/players"));
 
-        if (response.StatusCode == HttpStatusCode.Forbidden)
-        {
-            var responseEntity = new ErlcResponse<ErlcPlayer[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = "Invalid access token"
-            };
+    /// Retrieves the server's join logs, detailing information about players joining the server.
+    /// <returns>An array of join log entries, representing details about players joining the server.</returns>
+    /// <exception cref="InvalidTokenException">Thrown if the request is forbidden due to an invalid access token.</exception>
+    /// <exception cref="JsonException">Thrown if the response content cannot be deserialized into the expected type.</exception>
+    /// <exception cref="HttpRequestException">Thrown when the HTTP request fails or encounters success status issues.</exception>
+    public Task<JoinLog[]> GetJoinLogs() => Request<JoinLog[]>(new HttpRequestMessage(HttpMethod.Get, "server/joinlogs"));
 
-            return responseEntity;
-        }
+    /// Retrieves the list of player identifiers currently in the server queue.
+    /// <returns>An array of unsigned long integers, each representing a player identifier in the queue.</returns>
+    /// <exception cref="InvalidTokenException">Thrown if the request is forbidden due to an invalid access token.</exception>
+    /// <exception cref="JsonException">Thrown if the response content cannot be deserialized to the expected type.</exception>
+    /// <exception cref="HttpRequestException">Thrown when the HTTP request fails or encounters success status issues.</exception>
+    public Task<ulong[]> GetPlayersInQueue() => Request<ulong[]>(new HttpRequestMessage(HttpMethod.Get, "server/queue"));
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var responseEntity = new ErlcResponse<ErlcPlayer[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode
-            };
+    /// <summary>
+    /// Retrieves a list of kill logs from the server, providing details about player kills.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation. The task result contains an array of <see cref="KillLog"/> objects.</returns>
+    public Task<KillLog[]> GetKillLogs() => Request<KillLog[]>(new HttpRequestMessage(HttpMethod.Get, "server/killlogs"));
 
-            return responseEntity;
-        }
+    /// Retrieves the logs of executed commands from the server.
+    /// <returns>An array of <see cref="CommandLog"/> objects representing the logs of executed commands.</returns>
+    /// <exception cref="InvalidTokenException">Thrown if the request is forbidden due to an invalid access token.</exception>
+    /// <exception cref="JsonException">Thrown if the response content cannot be deserialized to the <see cref="CommandLog"/> type.</exception>
+    /// <exception cref="HttpRequestException">Thrown when the HTTP request fails or encounters success status issues.</exception>
+    public Task<CommandLog[]> GetCommandLogs() => Request<CommandLog[]>(new HttpRequestMessage(HttpMethod.Get, "server/commandlogs"));
 
-        var players = await response.Content.ReadFromJsonAsync<ErlcPlayer[]>();
-        if (players is null)
-        {
-            var responseEntity = new ErlcResponse<ErlcPlayer[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = $"Unable to parse players response: {response}"
-            };
-            
-            return responseEntity;
-        }
-        
-        return new ErlcResponse<ErlcPlayer[]>
-        {
-            Success = true,
-            StatusCode = response.StatusCode,
-            Result = players
-        };
-    }
+    /// Retrieves all moderator call logs from the server.
+    /// Returns an array of ModeratorCallLog objects, each containing information about a mod call.
+    /// <returns>
+    /// An array of ModeratorCallLog objects representing the moderator call logs.
+    /// </returns>
+    public Task<ModeratorCallLog[]> GetModCallLogs() => Request<ModeratorCallLog[]>(new HttpRequestMessage(HttpMethod.Get, "server/modcalls"));
 
-    /// <inheritdoc cref="Server.GetJoinLogs()"/>
-    public async Task<ErlcResponse<JoinLog[]>> GetJoinLogs()
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, "server/joinlogs");
-        var response = await _httpClient.SendAsync(request);
+    /// Retrieves the list of bans from the ERLC server.
+    /// <returns>A dictionary where the keys are user identifiers and the values are the respective user names.</returns>
+    /// <exception cref="InvalidTokenException">Thrown if the request is forbidden due to an invalid access token.</exception>
+    /// <exception cref="JsonException">Thrown if the response content cannot be deserialized to a dictionary.</exception>
+    /// <exception cref="HttpRequestException">Thrown when the HTTP request fails or encounters success status issues.</exception>
+    public Task<Dictionary<string, string>> GetBans() => Request<Dictionary<string, string>>(new HttpRequestMessage(HttpMethod.Get, "server/bans"));
 
-        if (response.StatusCode == HttpStatusCode.Forbidden)
-        {
-            var responseEntity = new ErlcResponse<JoinLog[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = "Invalid access token"
-            };
-            
-            return responseEntity;
-        }
-        
-        if (!response.IsSuccessStatusCode)
-        {
-            var responseEntity = new ErlcResponse<JoinLog[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode
-            };
-            
-            return responseEntity;
-        }
-
-        var logs = await response.Content.ReadFromJsonAsync<JoinLog[]>();
-        if (logs is null)
-        {
-            var responseEntity = new ErlcResponse<JoinLog[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = $"Unable to parse join logs response: {response}"
-            };
-            
-            return responseEntity;
-        }
-        
-        return new ErlcResponse<JoinLog[]>
-        {
-            Success = true,
-            StatusCode = response.StatusCode,
-            Result = logs
-        };
-    }
-
-    /// <inheritdoc cref="Server.GetPlayersInQueue()"/>
-    public async Task<ErlcResponse<ulong[]>> GetPlayersInQueue()
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, "server/queue");
-        var response = await _httpClient.SendAsync(request);
-
-        if (response.StatusCode == HttpStatusCode.Forbidden)
-        {
-            var responseEntity = new ErlcResponse<ulong[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = "Invalid access token"
-            };
-            
-            return responseEntity;
-        }
-        
-        if (!response.IsSuccessStatusCode)
-        {
-            var responseEntity = new ErlcResponse<ulong[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode
-            };
-        }
-
-        var queue = await response.Content.ReadFromJsonAsync<ulong[]>();
-        if (queue is null)
-        {
-            var responseEntity = new ErlcResponse<ulong[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = $"Unable to parse queue response: {response}"
-            };
-        }
-        
-        return new ErlcResponse<ulong[]>
-        {
-            Success = true,
-            StatusCode = response.StatusCode,
-            Result = queue
-        };
-    }
-    
-    /// <inheritdoc cref="Server.GetKillLogs()"/>
-    public async Task<ErlcResponse<KillLog[]>> GetKillLogs()
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, "server/killlogs");
-        var response = await _httpClient.SendAsync(request);
-
-        if (response.StatusCode == HttpStatusCode.Forbidden)
-        {
-            var responseEntity = new ErlcResponse<KillLog[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = "Invalid access token"
-            };
-            
-            return responseEntity;
-        }
-        
-        if (!response.IsSuccessStatusCode)
-        {
-            var responseEntity = new ErlcResponse<KillLog[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode
-            };
-
-            return responseEntity;
-        }
-
-        var killLogs = await response.Content.ReadFromJsonAsync<KillLog[]>();
-        if (killLogs is null)
-        {
-            var responseEntity = new ErlcResponse<KillLog[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = $"Unable to parse kill logs response: {response}"
-            };
-        }
-        
-        return new ErlcResponse<KillLog[]>
-        {
-            Success = true,
-            StatusCode = response.StatusCode,
-            Result = killLogs
-        };
-    }
-
-    /// <inheritdoc cref="Server.GetCommandLogs()"/>
-    public async Task<ErlcResponse<CommandLog[]>> GetCommandLogs()
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, "server/commandlogs");
-        var response = await _httpClient.SendAsync(request);
-        
-        if (response.StatusCode == HttpStatusCode.Forbidden)
-        {
-            var responseEntity = new ErlcResponse<CommandLog[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = "Invalid access token"
-            };
-
-            return responseEntity;
-        }
-        
-        if (!response.IsSuccessStatusCode)
-        {
-            var responseEntity = new ErlcResponse<CommandLog[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode
-            };
-
-            return responseEntity;
-        }
-        
-        var commandLogs = await response.Content.ReadFromJsonAsync<CommandLog[]>();
-        if (commandLogs is null)
-        {
-            var responseEntity = new ErlcResponse<CommandLog[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = $"Unable to parse command logs response: {response}"
-            };
-
-            return responseEntity;
-        }
-
-        return new ErlcResponse<CommandLog[]>
-        {
-            Success = true,
-            StatusCode = response.StatusCode,
-            Result = commandLogs
-        };
-    }
-
-    /// <inheritdoc cref="Server.GetModCallLogs()"/>
-    public async Task<ErlcResponse<ModeratorCallLog[]>> GetModCallLogs()
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, "server/modcalls");
-        var response = await _httpClient.SendAsync(request);
-        
-        if (response.StatusCode == HttpStatusCode.Forbidden)
-        {
-            var responseEntity = new ErlcResponse<ModeratorCallLog[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = "Invalid access token"
-            };
-
-            return responseEntity;
-        }
-        
-        if (!response.IsSuccessStatusCode)
-        {
-            var responseEntity = new ErlcResponse<ModeratorCallLog[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode
-            };
-
-            return responseEntity;
-        }
-        
-        var moderatorCallLogs = await response.Content.ReadFromJsonAsync<ModeratorCallLog[]>();
-        if (moderatorCallLogs is null)
-        {
-            var responseEntity = new ErlcResponse<ModeratorCallLog[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = $"Unable to parse mod call logs response: {response}"
-            };
-
-            return responseEntity;
-        }
-
-        return new ErlcResponse<ModeratorCallLog[]>
-        {
-            Success = true,
-            StatusCode = response.StatusCode,
-            Result = moderatorCallLogs
-        };
-    }
-
-    /// <inheritdoc cref="Server.GetBans()"/>
-    public async Task<ErlcResponse<Dictionary<string, string>>> GetBans()
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, "server/bans");
-        var response = await _httpClient.SendAsync(request);
-        
-        if (response.StatusCode == HttpStatusCode.Forbidden)
-        {
-            var responseEntity = new ErlcResponse<Dictionary<string, string>>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = "Invalid access token"
-            };
-
-            return responseEntity;
-        }
-        
-        if (!response.IsSuccessStatusCode)
-        {
-            var responseEntity = new ErlcResponse<Dictionary<string, string>>
-            {
-                Success = false,
-                StatusCode = response.StatusCode
-            };
-
-            return responseEntity;
-        }
-        
-        var commandLogs = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-        if (commandLogs is null)
-        {
-            var responseEntity = new ErlcResponse<Dictionary<string, string>>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = $"Unable to parse command logs response: {response}"
-            };
-
-            return responseEntity;
-        }
-
-        return new ErlcResponse<Dictionary<string, string>>
-        {
-            Success = true,
-            StatusCode = response.StatusCode,
-            Result = commandLogs
-        };
-    }
-
-    /// <inheritdoc cref="Server.GetSpawnedVehicles()"/>
-    public async Task<ErlcResponse<SpawnedVehicle[]>> GetSpawnedVehicles()
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, "server/vehicles");
-        var response = await _httpClient.SendAsync(request);
-        
-        if (response.StatusCode == HttpStatusCode.Forbidden)
-        {
-            var responseEntity = new ErlcResponse<SpawnedVehicle[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = "Invalid access token"
-            };
-
-            return responseEntity;
-        }
-        
-        if (!response.IsSuccessStatusCode)
-        {
-            var responseEntity = new ErlcResponse<SpawnedVehicle[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode
-            };
-
-            return responseEntity;
-        }
-        
-        var commandLogs = await response.Content.ReadFromJsonAsync<SpawnedVehicle[]>();
-        if (commandLogs is null)
-        {
-            var responseEntity = new ErlcResponse<SpawnedVehicle[]>
-            {
-                Success = false,
-                StatusCode = response.StatusCode,
-                ErrorMessage = $"Unable to parse command logs response: {response}"
-            };
-
-            return responseEntity;
-        }
-
-        return new ErlcResponse<SpawnedVehicle[]>
-        {
-            Success = true,
-            StatusCode = response.StatusCode,
-            Result = commandLogs
-        };
-    }
+    /// Retrieves a list of all spawned vehicles in the server.
+    /// <returns>An array of <see cref="SpawnedVehicle"/> representing the currently spawned vehicles.</returns>
+    /// <exception cref="InvalidTokenException">Thrown if the request is forbidden due to an invalid access token.</exception>
+    /// <exception cref="JsonException">Thrown if the response content cannot be deserialized to an array of SpawnedVehicle.</exception>
+    /// <exception cref="HttpRequestException">Thrown when the HTTP request fails or encounters success status issues.</exception>
+    public Task<SpawnedVehicle[]> GetSpawnedVehicles() => Request<SpawnedVehicle[]>(new HttpRequestMessage(HttpMethod.Get, "server/vehicles"));
 }
