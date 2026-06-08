@@ -8,9 +8,14 @@
         <Version>1.1.0</Version>
         <Authors>wqffles_com</Authors>
         <Description>Client library for the ER:LC API.</Description>
+        <PackageReadmeFile>..\README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <None Include="..\README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
 </Project>

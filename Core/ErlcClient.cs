@@ -73,7 +73,10 @@ public class ErlcClient : IDisposable
         var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
 
         var response = await _httpClient.GetAsync($"v2/server{queryString}");
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            await HandleErrorResponseAsync(response);
+        }
         
         var json = await response.Content.ReadAsStringAsync();
         var serverInfo = JsonConvert.DeserializeObject<ServerInfo>(json, _serializerSettings);
@@ -93,6 +96,29 @@ public class ErlcClient : IDisposable
         var content = new StringContent(json, Encoding.UTF8, "application/json");
         
         var response = await _httpClient.PostAsync("v2/server/command", content);
+        if (!response.IsSuccessStatusCode)
+        {
+            await HandleErrorResponseAsync(response);
+        }
+    }
+
+    private async Task HandleErrorResponseAsync(HttpResponseMessage response)
+    {
+        var statusCode = (int)response.StatusCode;
+        if (statusCode is 400 or 422 or 500)
+        {
+            var errorJson = await response.Content.ReadAsStringAsync();
+            try
+            {
+                var errorResponse = JsonConvert.DeserializeObject<ErlcErrorResponse>(errorJson);
+                throw new ErlcApiException(statusCode, errorResponse);
+            }
+            catch (JsonException)
+            {
+                // Fallback if JSON is invalid
+            }
+        }
+
         response.EnsureSuccessStatusCode();
     }
 
