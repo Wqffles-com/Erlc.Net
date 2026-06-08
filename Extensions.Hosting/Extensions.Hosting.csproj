@@ -4,6 +4,10 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <PackageId>Erlc.Net.Extensions.Hosting</PackageId>
+        <Authors>wqffles_com</Authors>
+        <Version>1.1.0</Version>
+        <Description>Extensions for Erlc.Net</Description>
     </PropertyGroup>
 
     <ItemGroup>

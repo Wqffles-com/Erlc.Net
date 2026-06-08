@@ -4,10 +4,13 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <PackageId>Erlc.Net.Core</PackageId>
+        <Version>1.1.0</Version>
+        <Authors>wqffles_com</Authors>
+        <Description>Client library for the ER:LC API.</Description>
     </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     </ItemGroup>
-
 </Project>
