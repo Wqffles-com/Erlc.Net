@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Core.Models;
+namespace Erlc.Net.Core.Models;
 
 public class Player : BaseEntity
 {

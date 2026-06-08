@@ -1,9 +1,9 @@
 using System.Runtime.Serialization;
 using System.Text;
-using Core.Models;
+using Erlc.Net.Core.Models;
 using Newtonsoft.Json;
 
-namespace Core;
+namespace Erlc.Net.Core;
 
 public class ErlcClient : IDisposable
 {

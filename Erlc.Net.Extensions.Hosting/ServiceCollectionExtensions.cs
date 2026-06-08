@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace Extensions.Hosting;
+namespace Erlc.Net.Extensions.Hosting;
 
 public static class ServiceCollectionExtensions
 {
@@ -25,13 +25,13 @@ public static class ServiceCollectionExtensions
 
     private static IServiceCollection AddErlcClientInternal(IServiceCollection services)
     {
-        services.AddHttpClient(nameof(Core.ErlcClient));
+        services.AddHttpClient(nameof(Erlc.Net.Core.ErlcClient));
 
-        services.AddTransient<Core.ErlcClient>(serviceProvider =>
+        services.AddTransient<Erlc.Net.Core.ErlcClient>(serviceProvider =>
         {
             var options = serviceProvider.GetRequiredService<IOptions<ErlcOptions>>().Value;
-            var httpClient = serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(Core.ErlcClient));
-            return new Core.ErlcClient(options.ApiKey, httpClient);
+            var httpClient = serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(Erlc.Net.Core.ErlcClient));
+            return new Erlc.Net.Core.ErlcClient(options.ApiKey, httpClient);
         });
 
         return services;

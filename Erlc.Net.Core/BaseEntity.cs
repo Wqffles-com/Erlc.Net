@@ -1,7 +1,7 @@
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 
-namespace Core;
+namespace Erlc.Net.Core;
 
 public abstract class BaseEntity
 {

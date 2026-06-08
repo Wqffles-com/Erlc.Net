@@ -1,4 +1,4 @@
-namespace Core.Models;
+namespace Erlc.Net.Core.Models;
 
 public class Vehicle
 {

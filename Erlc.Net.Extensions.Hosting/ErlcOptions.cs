@@ -1,4 +1,4 @@
-namespace Extensions.Hosting;
+namespace Erlc.Net.Extensions.Hosting;
 
 public class ErlcOptions
 {

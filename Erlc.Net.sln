@@ -1,8 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "Core\Core.csproj", "{90470CB7-2048-4DBF-806A-3BDA393B721F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Erlc.Net.Core", "Erlc.Net.Core\Erlc.Net.Core.csproj", "{90470CB7-2048-4DBF-806A-3BDA393B721F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extensions.Hosting", "Extensions.Hosting\Extensions.Hosting.csproj", "{49B58832-D69A-4859-AE0D-60219C40CF43}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Erlc.Net.Extensions.Hosting", "Erlc.Net.Extensions.Hosting\Erlc.Net.Extensions.Hosting.csproj", "{49B58832-D69A-4859-AE0D-60219C40CF43}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
