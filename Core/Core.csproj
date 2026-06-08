@@ -8,7 +8,7 @@
         <Version>1.1.0</Version>
         <Authors>wqffles_com</Authors>
         <Description>Client library for the ER:LC API.</Description>
-        <PackageReadmeFile>..\README.md</PackageReadmeFile>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>

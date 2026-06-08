@@ -8,7 +8,7 @@
         <Authors>wqffles_com</Authors>
         <Version>1.1.0</Version>
         <Description>Extensions for Erlc.Net</Description>
-        <PackageReadmeFile>..\README.md</PackageReadmeFile>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
