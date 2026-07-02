@@ -1,9 +1,40 @@
+## .NET
 bin/
 obj/
-/packages/
-riderModule.iml
-/_ReSharper.Caches/
-.idea
+*.nupkg
+*.suo
 *.user
-appsettings*
-.junie
+*.userosscache
+*.sln.docstats
+*.userprefs
+
+## dotnet tools
+**/tools/**
+**/packages/**
+**/node_modules/**
+
+## NuGet
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+## JetBrains Rider
+.idea/
+*_Resharper.*/
+/_ReSharper.Caches/
+riderModule.iml
+
+## Visual Studio
+.vs/
+*.csproj.user
+*.dbmdl
+*.jfm
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Secrets
+appsettings*.local.*
+appsettings*.Development.*

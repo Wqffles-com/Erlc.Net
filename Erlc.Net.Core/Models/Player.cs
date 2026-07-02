@@ -2,13 +2,13 @@ using Newtonsoft.Json;
 
 namespace Erlc.Net.Core.Models;
 
-public class Player : BaseEntity
+public class Player : BaseEntity, IEquatable<Player>
 {
     public string Team { get; set; } = string.Empty;
-    
+
     [JsonProperty("Player")]
     public string RawPlayer { get; set; } = string.Empty;
-    
+
     public string Callsign { get; set; } = string.Empty;
     public Location? Location { get; set; }
     public string Permission { get; set; } = string.Empty;
@@ -29,14 +29,32 @@ public class Player : BaseEntity
     {
         return GetClient().RunCommandAsync($":kick {Name} {reason}");
     }
-    
+
     public Task Kill()
     {
         return GetClient().RunCommandAsync($":kill {Name}");
     }
-    
+
     public Task Respawn()
     {
         return GetClient().RunCommandAsync($":respawn {Name}");
+    }
+
+    public bool Equals(Player? other)
+    {
+        if (other is null) return false;
+        return Team == other.Team
+            && RawPlayer == other.RawPlayer
+            && Callsign == other.Callsign
+            && Equals(Location, other.Location)
+            && Permission == other.Permission
+            && WantedStars == other.WantedStars;
+    }
+
+    public override bool Equals(object? obj) => Equals(obj as Player);
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Team, RawPlayer, Callsign, Location, Permission, WantedStars);
     }
 }

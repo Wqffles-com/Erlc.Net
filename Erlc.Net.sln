@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Erlc.Net.Core", "Erlc.Net.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Erlc.Net.Extensions.Hosting", "Erlc.Net.Extensions.Hosting\Erlc.Net.Extensions.Hosting.csproj", "{49B58832-D69A-4859-AE0D-60219C40CF43}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Erlc.Net.Tests", "Erlc.Net.Tests\Erlc.Net.Tests.csproj", "{ED61D2CF-0724-46D1-B13F-09CFEFA2CDD6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,6 +40,18 @@ Global
 		{49B58832-D69A-4859-AE0D-60219C40CF43}.Release|x64.Build.0 = Release|Any CPU
 		{49B58832-D69A-4859-AE0D-60219C40CF43}.Release|x86.ActiveCfg = Release|Any CPU
 		{49B58832-D69A-4859-AE0D-60219C40CF43}.Release|x86.Build.0 = Release|Any CPU
+		{ED61D2CF-0724-46D1-B13F-09CFEFA2CDD6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED61D2CF-0724-46D1-B13F-09CFEFA2CDD6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED61D2CF-0724-46D1-B13F-09CFEFA2CDD6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{ED61D2CF-0724-46D1-B13F-09CFEFA2CDD6}.Debug|x64.Build.0 = Debug|Any CPU
+		{ED61D2CF-0724-46D1-B13F-09CFEFA2CDD6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{ED61D2CF-0724-46D1-B13F-09CFEFA2CDD6}.Debug|x86.Build.0 = Debug|Any CPU
+		{ED61D2CF-0724-46D1-B13F-09CFEFA2CDD6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED61D2CF-0724-46D1-B13F-09CFEFA2CDD6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ED61D2CF-0724-46D1-B13F-09CFEFA2CDD6}.Release|x64.ActiveCfg = Release|Any CPU
+		{ED61D2CF-0724-46D1-B13F-09CFEFA2CDD6}.Release|x64.Build.0 = Release|Any CPU
+		{ED61D2CF-0724-46D1-B13F-09CFEFA2CDD6}.Release|x86.ActiveCfg = Release|Any CPU
+		{ED61D2CF-0724-46D1-B13F-09CFEFA2CDD6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

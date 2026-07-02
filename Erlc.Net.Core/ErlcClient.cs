@@ -3,18 +3,29 @@ using System.Text;
 using Erlc.Net.Core.Models;
 using Newtonsoft.Json;
 
+#pragma warning disable SYSLIB0050 // StreamingContext is required by Newtonsoft.Json
+
 namespace Erlc.Net.Core;
+
+public class ErlcClientOptions
+{
+    public string ApiKey { get; set; } = string.Empty;
+    public string ServerId { get; set; } = string.Empty;
+    public int PollingIntervalSeconds { get; set; } = 15;
+    public bool EnablePolling { get; set; } = true;
+}
 
 public class ErlcClient : IDisposable
 {
-    private static readonly TimeSpan ServerInfoPollingInterval = TimeSpan.FromSeconds(15);
-
     private readonly HttpClient _httpClient;
     private readonly JsonSerializerSettings _serializerSettings;
-    private readonly CancellationTokenSource _serverInfoEventsCancellationTokenSource = new();
-    private readonly Task _serverInfoEventsTask;
+    private CancellationTokenSource _serverInfoEventsCancellationTokenSource = new();
+    private readonly int _pollingIntervalSeconds;
     private ServerInfo? _cachedServerInfo;
     private bool _disposed;
+    private Task? _pollingTask;
+
+    public string ServerId { get; }
 
     public event EventHandler<ServerInfoChangedEventArgs>? ServerDetailsChanged;
     public event EventHandler<ServerInfoChangedEventArgs<List<Player>>>? PlayersChanged;
@@ -31,21 +42,58 @@ public class ErlcClient : IDisposable
     public event EventHandler<ServerInfoChangedEventArgs<List<Vehicle>>>? VehiclesChanged;
 
     public ErlcClient(string apiKey, HttpClient? httpClient = null)
+        : this(new ErlcClientOptions { ApiKey = apiKey, EnablePolling = false }, httpClient)
     {
+    }
+
+    public ErlcClient(ErlcClientOptions options, HttpClient? httpClient = null)
+    {
+        ServerId = options.ServerId;
+        _pollingIntervalSeconds = options.PollingIntervalSeconds;
+
         _httpClient = httpClient ?? new HttpClient();
         if (_httpClient.BaseAddress == null)
         {
             _httpClient.BaseAddress = new Uri("https://api.erlc.gg/");
         }
 
-        _httpClient.DefaultRequestHeaders.Add("Server-Key", apiKey);
+        _httpClient.DefaultRequestHeaders.Add("Server-Key", options.ApiKey);
 
         _serializerSettings = new JsonSerializerSettings
         {
             Context = new StreamingContext(StreamingContextStates.Other, this)
         };
+    }
 
-        _serverInfoEventsTask = RunServerInfoEventsAsync(_serverInfoEventsCancellationTokenSource.Token);
+    public void StartPolling()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        if (_pollingTask != null)
+            return;
+
+        _pollingTask = Task.Run(() => RunServerInfoEventsAsync(_serverInfoEventsCancellationTokenSource.Token));
+    }
+
+    public void StopPolling()
+    {
+        var task = _pollingTask;
+        if (task == null)
+            return;
+
+        _serverInfoEventsCancellationTokenSource.Cancel();
+
+        try
+        {
+            task.Wait(TimeSpan.FromSeconds(5));
+        }
+        catch
+        {
+        }
+
+        _serverInfoEventsCancellationTokenSource.Dispose();
+        _serverInfoEventsCancellationTokenSource = new CancellationTokenSource();
+        _pollingTask = null;
     }
 
     public async Task<ServerInfo> GetServerInfoAsync(
@@ -57,7 +105,8 @@ public class ErlcClient : IDisposable
         bool? commandLogs = null,
         bool? modCalls = null,
         bool? emergencyCalls = null,
-        bool? vehicles = null)
+        bool? vehicles = null,
+        CancellationToken cancellationToken = default)
     {
         var queryParams = new List<string>();
         if (players.HasValue) queryParams.Add($"Players={players.Value.ToString().ToLower()}");
@@ -72,30 +121,25 @@ public class ErlcClient : IDisposable
 
         var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
 
-        var response = await _httpClient.GetAsync($"v2/server{queryString}");
+        var response = await _httpClient.GetAsync($"v2/server{queryString}", cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             await HandleErrorResponseAsync(response);
         }
-        
-        var json = await response.Content.ReadAsStringAsync();
-        var serverInfo = JsonConvert.DeserializeObject<ServerInfo>(json, _serializerSettings);
 
-        if (serverInfo != null)
-        {
-            InjectClient(serverInfo);
-        }
+        var json = await response.Content.ReadAsStringAsync(cancellationToken);
+        var serverInfo = JsonConvert.DeserializeObject<ServerInfo>(json, _serializerSettings);
 
         return serverInfo ?? throw new InvalidOperationException("Failed to deserialize server info.");
     }
 
-    public async Task RunCommandAsync(string command)
+    public async Task RunCommandAsync(string command, CancellationToken cancellationToken = default)
     {
         var payload = new { Command = command };
         var json = JsonConvert.SerializeObject(payload);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
-        
-        var response = await _httpClient.PostAsync("v2/server/command", content);
+
+        var response = await _httpClient.PostAsync("v2/server/command", content, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             await HandleErrorResponseAsync(response);
@@ -115,7 +159,6 @@ public class ErlcClient : IDisposable
             }
             catch (JsonException)
             {
-                // Fallback if JSON is invalid
             }
         }
 
@@ -130,20 +173,20 @@ public class ErlcClient : IDisposable
         }
 
         _disposed = true;
-        _serverInfoEventsCancellationTokenSource.Cancel();
+        StopPolling();
         _serverInfoEventsCancellationTokenSource.Dispose();
         _httpClient.Dispose();
     }
 
     private async Task RunServerInfoEventsAsync(CancellationToken cancellationToken)
     {
-        using var timer = new PeriodicTimer(ServerInfoPollingInterval);
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(_pollingIntervalSeconds));
 
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                await PollServerInfoAsync();
+                await PollServerInfoAsync(cancellationToken);
                 await timer.WaitForNextTickAsync(cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -157,7 +200,7 @@ public class ErlcClient : IDisposable
         }
     }
 
-    private async Task PollServerInfoAsync()
+    private async Task PollServerInfoAsync(CancellationToken cancellationToken)
     {
         var serverInfo = await GetServerInfoAsync(
             players: true,
@@ -168,7 +211,8 @@ public class ErlcClient : IDisposable
             commandLogs: true,
             modCalls: true,
             emergencyCalls: true,
-            vehicles: true);
+            vehicles: true,
+            cancellationToken: cancellationToken);
 
         var cachedServerInfo = _cachedServerInfo;
         if (cachedServerInfo != null)
@@ -227,53 +271,35 @@ public class ErlcClient : IDisposable
 
     private static bool AreEqual<T>(T previous, T current)
     {
-        return JsonConvert.SerializeObject(previous) == JsonConvert.SerializeObject(current);
-    }
+        if (previous is null && current is null) return true;
+        if (previous is null || current is null) return false;
 
-    private void InjectClient(object value)
-    {
-        if (value is BaseEntity entity)
-        {
-            entity.Client = this;
-        }
+        if (previous is IEquatable<T> equatable)
+            return equatable.Equals(current);
 
-        if (value is string)
+        if (previous is System.Collections.IList prevList && current is System.Collections.IList currList)
         {
-            return;
-        }
-
-        if (value is System.Collections.IEnumerable enumerable)
-        {
-            foreach (var item in enumerable)
+            if (prevList.Count != currList.Count) return false;
+            for (var i = 0; i < prevList.Count; i++)
             {
-                if (item != null)
-                {
-                    InjectClient(item);
-                }
+                if (!Equals(prevList[i], currList[i]))
+                    return false;
             }
-
-            return;
+            return true;
         }
 
-        var type = value.GetType();
-        if (type.IsPrimitive || type.IsEnum || type == typeof(decimal) || type == typeof(DateTime))
+        if (previous is System.Collections.IDictionary prevDict && current is System.Collections.IDictionary currDict)
         {
-            return;
+            if (prevDict.Count != currDict.Count) return false;
+            foreach (var key in prevDict.Keys)
+            {
+                if (!currDict.Contains(key) || !Equals(prevDict[key], currDict[key]))
+                    return false;
+            }
+            return true;
         }
 
-        foreach (var property in type.GetProperties())
-        {
-            if (!property.CanRead || property.GetIndexParameters().Length > 0)
-            {
-                continue;
-            }
-
-            var propertyValue = property.GetValue(value);
-            if (propertyValue != null)
-            {
-                InjectClient(propertyValue);
-            }
-        }
+        return EqualityComparer<T>.Default.Equals(previous, current);
     }
 }
 

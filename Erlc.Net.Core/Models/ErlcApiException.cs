@@ -1,4 +1,3 @@
-using System;
 using Newtonsoft.Json;
 
 namespace Erlc.Net.Core.Models;
@@ -20,8 +19,8 @@ public class ErlcApiException : Exception
     public int StatusCode { get; }
     public ErlcErrorResponse? ErrorResponse { get; }
 
-    public ErlcApiException(int statusCode, ErlcErrorResponse? errorResponse) 
-        : base(errorResponse?.Error ?? $"ER:LC API returned status code {statusCode}")
+    public ErlcApiException(int statusCode, ErlcErrorResponse? errorResponse)
+        : base(!string.IsNullOrEmpty(errorResponse?.Error) ? errorResponse.Error : $"ER:LC API returned status code {statusCode}")
     {
         StatusCode = statusCode;
         ErrorResponse = errorResponse;

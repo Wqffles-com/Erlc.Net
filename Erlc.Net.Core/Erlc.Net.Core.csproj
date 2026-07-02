@@ -14,6 +14,11 @@
 
     <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+      <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Erlc.Net.Tests" />
     </ItemGroup>
     
     <ItemGroup>
