@@ -135,7 +135,7 @@ public class ErlcClient : IDisposable
 
     public async Task RunCommandAsync(string command, CancellationToken cancellationToken = default)
     {
-        var payload = new { Command = command };
+        var payload = new { command };
         var json = JsonConvert.SerializeObject(payload);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 

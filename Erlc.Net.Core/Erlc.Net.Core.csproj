@@ -5,7 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <PackageId>Erlc.Net.Core</PackageId>
-        <Version>1.2.0</Version>
+        <Version>1.2.1</Version>
         <Authors>wqffles_com</Authors>
         <Description>Client library for the ER:LC API.</Description>
         <PackageReadmeFile>README.md</PackageReadmeFile>
